@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFXIV 职能随机骰子 V2.0</title>
+    <style>
+        :root {
+            --bg-color: #232323; --card-bg: #333; --text-color: #e0e0e0;
+            --t-color: #4169e1; --h-color: #32cd32; --d-color: #dc143c; --accent: #f39c12;
+        }
+        body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 600px; width: 100%; }
+        h1 { text-align: center; color: var(--accent); font-size: 1.5rem; text-shadow: 1px 1px 2px #000; }
+        .config-panel, .player-card { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        select, input, button { background: #444; color: #fff; border: 1px solid #666; padding: 8px; border-radius: 4px; }
+        button { background: var(--accent); border: none; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; padding: 12px; margin-top: 10px; transition: 0.2s; }
+        button:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        .player-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 10px; }
+        .job-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; }
+        .job-item { display: flex; align-items: center; justify-content: space-between; }
+        .job-item input { width: 45px; text-align: center; background: #222; }
+        .result-box { background: #1a1a1a; border: 2px solid var(--accent); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; }
+        .res-row { display: flex; justify-content: space-between; margin: 5px 0; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+        .res-t { background: rgba(65, 105, 225, 0.2); border-left: 5px solid var(--t-color); }
+        .res-h { background: rgba(50, 205, 50, 0.2); border-left: 5px solid var(--h-color); }
+        .res-d { background: rgba(220, 20, 60, 0.2); border-left: 5px solid var(--d-color); }
+        .res-bench { background: #222; border-left: 5px solid #888; color: #888; }
+        .role-tag { font-size: 0.8rem; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>FFXIV 副本职能随机匹配</h1>
+
+    <div class="config-panel">
+        <label>选择副本模式：</label>
+        <select id="dungeonType" style="width: 100%; margin-top: 8px;">
+            <option value="4,1,1,2,18">4人轻型 (1T 1H 2D | 18+)</option>
+            <option value="4,1,1,2,50">4人拾级 (1T 1H 2D | 50+)</option>
+            <option value="4,1,1,2,100">4人满级 (1T 1H 2D | 100)</option>
+            <option value="8,2,2,4,18">8人满编 (2T 2H 4D | 18+)</option>
+            <option value="8,1,2,5,50">8人团本 (1T 2H 5D | 50+)</option>
+            <option value="99,99,99,99,1">自由模式 (全员随机 | 1+)</option>
+        </select>
+    </div>
+
+    <div id="playersContainer"></div>
+    
+    <button onclick="addPlayer()" style="background: #555; border: 1px dashed #999;">+ 添加队员</button>
+    <button onclick="roll()" style="background: linear-gradient(135deg, #e67e22, #d35400); margin-top: 20px;">开始掷骰 (Roll!)</button>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+    // 职业定义 (已排除驯兽、青魔)
+    const JOB_DATA = {
+        T: ["骑士", "战士", "暗黑骑士", "绝枪战士"],
+        H: ["白魔法师", "学者", "占星术士", "贤者"],
+        D: ["武僧", "龙骑士", "忍者", "武士", "钐镰客", "蝰蛇", "吟游诗人", "机工士", "舞者", "黑魔法师", "召唤师", "赤魔法师", "绘灵法师"]
+    };
+
+    let players = JSON.parse(localStorage.getItem('ffxiv_v2_players')) || [
+        { name: "张三", online: true, levels: {} },
+        { name: "李四", online: true, levels: {} }
+    ];
+
+    function save() { localStorage.setItem('ffxiv_v2_players', JSON.stringify(players)); }
+
+    function renderPlayers() {
+        const container = document.getElementById('playersContainer');
+        container.innerHTML = '';
+        players.forEach((p, pIdx) => {
+            const card = document.createElement('div');
+            card.className = 'player-card';
+            card.innerHTML = `
+                <div class="player-header">
+                    <input type="text" value="${p.name}" onchange="players[${pIdx}].name=this.value;save()" style="background:transparent; border:none; border-bottom:1px solid #666; width:120px;">
+                    <div>
+                        <label style="font-size:0.9rem; margin-right:10px;"><input type="checkbox" ${p.online ? 'checked' : ''} onchange="players[${pIdx}].online=this.checked;save()"> 在线</label>
+                        <span style="cursor:pointer; color: #cc4444;" onclick="removePlayer(${pIdx})">✕</span>
+                    </div>
+                </div>
+                <div class="job-inputs">
+                    ${Object.keys(JOB_DATA).map(role => 
+                        JOB_DATA[role].map(job => `
+                            <div class="job-item">
+                                <span style="color:${role==='T'?'#4169e1':role==='H'?'#32cd32':'#dc143c'}">${job}</span>
+                                <input type="number" value="${p.levels[job] || 0}" min="0" max="100" 
+                                    onchange="updateLevel(${pIdx}, '${job}', this.value)">
+                            </div>
+                        `).join('')
+                    ).join('')}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function updateLevel(pIdx, job, val) {
+        players[pIdx].levels[job] = parseInt(val) || 0;
+        save();
+    }
+
+    function addPlayer() {
+        players.push({ name: `玩家${players.length + 1}`, online: true, levels: {} });
+        renderPlayers();
+        save();
+    }
+
+    function removePlayer(idx) {
+        if(confirm("确定删除这位队员吗？")) {
+            players.splice(idx, 1);
+            renderPlayers();
+            save();
+        }
+    }
+
+    function roll() {
+        const config = document.getElementById('dungeonType').value.split(',');
+        const limit = { total: +config[0], T: +config[1], H: +config[2], D: +config[3], minLvl: +config[4] };
+        const onlineList = players.filter(p => p.online);
+        
+        if (onlineList.length === 0) return alert("请先勾选在线的玩家！");
+
+        // 核心改进：计算需要轮空的人数
+        const benchNeeded = Math.max(0, onlineList.length - limit.total);
+        
+        // 准备每个人的可用职业池，并加入“轮空”作为备选
+        const playerPool = onlineList.map(p => {
+            let options = [];
+            for(let role in JOB_DATA) {
+                JOB_DATA[role].forEach(job => {
+                    if ((p.levels[job] || 0) >= limit.minLvl) options.push({job, role});
+                });
+            }
+            // 只要有轮空名额，每个人都有可能被轮空
+            if (benchNeeded > 0) {
+                options.push({ job: "轮空待命", role: "BENCH" });
+            }
+            // 洗牌个人选项
+            options.sort(() => Math.random() - 0.5);
+            return { name: p.name, options };
+        });
+
+        // 打乱玩家匹配顺序
+        playerPool.sort(() => Math.random() - 0.5);
+
+        let finalResults = [];
+        let success = false;
+
+        // 回溯算法：尝试分配职能
+        function solve(idx, curT, curH, curD, curB) {
+            if (idx === playerPool.length) {
+                // 检查是否全员都分配了（且符合副本配置或轮空配置）
+                success = true;
+                return true;
+            }
+            
+            const p = playerPool[idx];
+
+            for (let choice of p.options) {
+                // 职能计数检查
+                if (choice.role === 'T' && curT >= limit.T) continue;
+                if (choice.role === 'H' && curH >= limit.H) continue;
+                if (choice.role === 'D' && curD >= limit.D) continue;
+                if (choice.role === 'BENCH' && curB >= benchNeeded) continue;
+
+                finalResults.push({ name: p.name, job: choice.job, role: choice.role });
+                
+                const nextT = choice.role === 'T' ? curT + 1 : curT;
+                const nextH = choice.role === 'H' ? curH + 1 : curH;
+                const nextD = choice.role === 'D' ? curD + 1 : curD;
+                const nextB = choice.role === 'BENCH' ? curB + 1 : curB;
+
+                if (solve(idx + 1, nextT, nextH, nextD, nextB)) return true;
+                
+                finalResults.pop(); // 回溯
+            }
+            return false;
+        }
+
+        solve(0, 0, 0, 0, 0);
+
+        const resDiv = document.getElementById('result');
+        resDiv.style.display = 'block';
+        if (success) {
+            // 排序结果：让轮空的排在最后面
+            finalResults.sort((a, b) => (a.role === 'BENCH' ? 1 : -1));
+            
+            resDiv.innerHTML = `<h3 style="margin:0 0 10px 0; font-size:1rem; border-bottom:1px solid #444; padding-bottom:5px;">匹配方案已确认：</h3>` + 
+                finalResults.map(r => `
+                    <div class="res-row res-${r.role.toLowerCase()}">
+                        <span><b>${r.name}</b></span>
+                        <span>${r.job} <span class="role-tag">${r.role}</span></span>
+                    </div>
+                `).join('');
+        } else {
+            resDiv.innerHTML = `<b style='color:#ff7675'>匹配失败！</b><br><small>原因：在线玩家的职业储备不足以凑齐该副本（或等级不足）。</small>`;
+        }
+    }
+
+    renderPlayers();
+</script>
+</body>
+</html>
