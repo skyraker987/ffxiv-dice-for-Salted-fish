@@ -1,60 +1,181 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFXIV 职能同步随机骰子</title>
+    <title>FFXIV 职能同步随机骰子 - JSONBin 版</title>
     <style>
         :root {
-            --bg-color: #232323; --card-bg: #333; --text-color: #e0e0e0;
-            --t-color: #4169e1; --h-color: #32cd32; --d-color: #dc143c; --accent: #f39c12;
+            --bg-color: #1a1a1d;
+            --card-bg: #2d2d30;
+            --text-color: #e0e0e0;
+            --t-color: #4169e1;
+            --h-color: #32cd32;
+            --d-color: #dc143c;
+            --accent: #f39c12;
+            --border-color: #444;
         }
-        body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 600px; width: 100%; }
-        .status-bar { font-size: 0.8rem; margin-bottom: 10px; color: #888; text-align: right; }
-        .config-panel, .player-card { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        select, input, button { background: #444; color: #fff; border: 1px solid #666; padding: 8px; border-radius: 4px; }
-        button { background: var(--accent); border: none; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; padding: 12px; margin-top: 10px; transition: 0.2s; }
-        button:hover { filter: brightness(1.2); }
-        .player-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 8px; margin-bottom: 10px; }
-        .job-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; }
-        .job-item { display: flex; align-items: center; justify-content: space-between; }
-        .job-item input { width: 45px; text-align: center; }
-        .result-box { background: #1a1a1a; border: 2px solid var(--accent); padding: 15px; border-radius: 8px; margin-top: 20px; display: none; }
-        .res-row { display: flex; justify-content: space-between; margin: 5px 0; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
-        .res-t { border-left: 5px solid var(--t-color); background: rgba(65, 105, 225, 0.1); }
-        .res-h { border-left: 5px solid var(--h-color); background: rgba(50, 205, 50, 0.1); }
-        .res-d { border-left: 5px solid var(--d-color); background: rgba(220, 20, 60, 0.1); }
-        .res-bench { border-left: 5px solid #888; background: #222; opacity: 0.6; }
+        body {
+            font-family: "Microsoft YaHei", -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { max-width: 650px; width: 100%; }
+        .status-bar {
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.2);
+            color: #aaa;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        .config-panel, .player-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            border: 1px solid var(--border-color);
+        }
+        h2 { font-size: 1.1rem; margin-top: 0; color: var(--accent); border-left: 4px solid var(--accent); padding-left: 10px; }
+        
+        .control-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-row button { flex: 1; min-width: 120px; }
+
+        select, input, button {
+            background: #3e3e42;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        button {
+            background: var(--accent);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        .btn-secondary { background: #555; }
+        .btn-sync { background: #2980b9; }
+        .btn-io { background: #6c5ce7; }
+        .btn-roll { background: linear-gradient(135deg, #e67e22, #d35400); font-size: 1.2rem; padding: 15px; width: 100%; margin-top: 10px; }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .player-header input { background: transparent; border: none; border-bottom: 1px solid #666; font-size: 1.1rem; font-weight: bold; width: 150px; }
+        
+        .job-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem; }
+        .job-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+        }
+        .job-item input { width: 50px; text-align: center; padding: 4px; }
+
+        .result-box {
+            background: #000;
+            border: 2px solid var(--accent);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 25px;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .res-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 1.05rem;
+        }
+        .res-t { border-left: 6px solid var(--t-color); background: rgba(65, 105, 225, 0.15); }
+        .res-h { border-left: 6px solid var(--h-color); background: rgba(50, 205, 50, 0.15); }
+        .res-d { border-left: 6px solid var(--d-color); background: rgba(220, 20, 60, 0.15); }
+        .res-bench { border-left: 6px solid #888; background: rgba(136, 136, 136, 0.1); color: #888; }
+        
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            margin-left: 8px;
+        }
+        .bg-t { background: var(--t-color); }
+        .bg-h { background: var(--h-color); }
+        .bg-d { background: var(--d-color); }
+
+        .hidden-file { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="syncStatus" class="status-bar">正在检查云端同步...</div>
+    <div id="syncStatus" class="status-bar">等待同步...</div>
+
     <div class="config-panel">
-        <label>副本模式：</label>
-        <select id="dungeonType" style="width: 100%; margin-top: 8px;">
-            <option value="4,1,1,2,18">4人普通 (18+)</option>
-            <option value="4,1,1,2,100">4人满级 (100)</option>
-            <option value="8,2,2,4,18">8人讨伐 (18+)</option>
-            <option value="99,99,99,99,1">自由模式</option>
-        </select>
-        <button onclick="pushData()" style="background: #2980b9; font-size: 0.9rem; padding: 5px; margin-top: 10px;">手动同步到云端</button>
+        <h2>系统设置</h2>
+        <div class="control-group">
+            <label>当前副本模式：</label>
+            <select id="dungeonType">
+                <option value="4,1,1,2,18">4人轻型 (1T 1H 2D | 18+)</option>
+                <option value="4,1,1,2,100">4人满级 (1T 1H 2D | 100)</option>
+                <option value="8,2,2,4,18">8人满编 (2T 2H 4D | 18+)</option>
+                <option value="8,1,2,5,50">8人团本 (1T 2H 5D | 50+)</option>
+            </select>
+        </div>
+        
+        <div class="btn-row">
+            <button class="btn-sync" onclick="manualSync()">立即同步云端</button>
+            <button class="btn-io" onclick="exportData()">导出数据文件</button>
+            <button class="btn-io" onclick="document.getElementById('importFile').click()">导入数据文件</button>
+        </div>
+        <input type="file" id="importFile" class="hidden-file" accept=".json" onchange="importData(event)">
     </div>
 
-    <div id="playersContainer">加载中...</div>
+    <div id="playersContainer">正在努力加载队友数据...</div>
     
-    <button onclick="addPlayer()" style="background: #555;">+ 添加队员</button>
-    <button onclick="roll()" style="background: #e67e22; margin-top: 20px;">开始掷骰 (全员同步)</button>
+    <button class="btn-secondary" onclick="addPlayer()">+ 添加新队友</button>
+    <button class="btn-roll" onclick="roll()">开始掷骰 (同步最新等级)</button>
 
     <div id="result" class="result-box"></div>
 </div>
 
 <script>
-    // --- 配置区域 ---
-    const BIN_ID = "8befa6aaad668274c166"; // <--- 替换成你刚才申请的 ID
-    const API_URL = `https://api.npoint.io/${BIN_ID}`;
+    /**
+     * --- JSONBin.io 配置 ---
+     * 1. 注册 JSONBin.io (免费版足够使用)
+     * 2. 创建一个 Bin，获取 BIN_ID
+     * 3. 在 API Keys 页面获取 Master Key (X-Master-Key)
+     */
+    const BIN_ID = "6a0722fa250b1311c354d0a7"; 
+    const MASTER_KEY = "$2a$10$vxLXbAy3GuV9xjAcesqY/O845CkFJpsPHE1d1ACF0S9dIVj1hKvby"; 
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
     const JOB_DATA = {
         T: ["骑士", "战士", "暗黑骑士", "绝枪战士"],
@@ -64,54 +185,96 @@
 
     let players = [];
 
-    // --- 云端数据交互 ---
+    // --- 核心同步功能 ---
+
+    // 从云端获取数据
     async function fetchData() {
-        showStatus("正在下载云端配置...");
+        showStatus("正在从 JSONBin 下载最新等级...");
         try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            players = data.players || [];
+            const res = await fetch(API_URL, {
+                headers: { "X-Master-Key": MASTER_KEY }
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const json = await res.json();
+            players = json.record.players || [];
             renderPlayers();
-            showStatus("同步成功 (云端数据)");
+            showStatus("✅ 同步成功：已获取云端最新数据");
         } catch (e) {
-            showStatus("同步失败，使用本地缓存");
-            players = JSON.parse(localStorage.getItem('ffxiv_v2_players')) || [];
-            renderPlayers();
+            console.error(e);
+            showStatus("❌ 同步失败：请检查网络/VPN 或 API 配置");
+            // 失败时回退到本地缓存
+            const local = localStorage.getItem('ffxiv_salted_fish_data');
+            if (local) {
+                players = JSON.parse(local);
+                renderPlayers();
+            }
         }
     }
 
-// 修改后的同步函数
-async function pushData() {
-    showStatus("正在尝试同步到云端...");
-    localStorage.setItem('ffxiv_v2_players', JSON.stringify(players));
-    
-    try {
-        // 尝试使用 POST 覆盖数据。如果还是 401，建议去 npoint.io 重新建一个不带 Key 的 Bin
-        const response = await fetch(API_URL, {
-            method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ players: players })
-        });
-
-        if (response.ok) {
-            showStatus("✅ 已实时同步至云端");
-        } else {
-            // 这里会捕获 401 错误
-            showStatus("❌ 同步失败: " + response.status + " (权限拒绝)");
-            console.error("权限错误：请检查 npoint 是否设置了 Key。建议新建一个完全公开的 Bin。");
+    // 推送数据到云端
+    async function pushData() {
+        showStatus("正在上传更改到云端...");
+        localStorage.setItem('ffxiv_salted_fish_data', JSON.stringify(players));
+        
+        try {
+            const res = await fetch(API_URL, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': MASTER_KEY
+                },
+                body: JSON.stringify({ players: players })
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            showStatus("✅ 云端同步完成");
+        } catch (e) {
+            console.error(e);
+            showStatus("⚠️ 无法连接云端，数据已保存在浏览器本地");
         }
-    } catch (e) {
-        showStatus("❌ 网络异常，请检查 VPN 节点");
     }
-}
 
     function showStatus(msg) {
         document.getElementById('syncStatus').innerText = msg;
     }
 
-    // --- 界面与逻辑 ---
+    function manualSync() { fetchData(); }
+
+    // --- 导入导出功能 (应对 VPN 失效) ---
+
+    function exportData() {
+        const dataStr = JSON.stringify({ players, timestamp: new Date().getTime() }, null, 4);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = 'ffxiv_dice_backup.json';
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        showStatus("💾 数据已导出为 JSON 文件");
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.players) {
+                    players = imported.players;
+                    renderPlayers();
+                    pushData(); // 导入后尝试同步回云端
+                    alert("导入成功！");
+                }
+            } catch (err) {
+                alert("文件格式有误，无法导入");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- 界面逻辑 ---
+
     function renderPlayers() {
         const container = document.getElementById('playersContainer');
         container.innerHTML = '';
@@ -121,14 +284,19 @@ async function pushData() {
             card.innerHTML = `
                 <div class="player-header">
                     <input type="text" value="${p.name}" onchange="players[${pIdx}].name=this.value;pushData()">
-                    <label><input type="checkbox" ${p.online ? 'checked' : ''} onchange="players[${pIdx}].online=this.checked;pushData()"> 在线</label>
+                    <div>
+                        <label style="font-size:0.9rem; cursor:pointer">
+                            <input type="checkbox" ${p.online ? 'checked' : ''} onchange="players[${pIdx}].online=this.checked;pushData()"> 在线
+                        </label>
+                        <span style="margin-left:15px; color:#ff7675; cursor:pointer" onclick="removePlayer(${pIdx})">删除</span>
+                    </div>
                 </div>
                 <div class="job-inputs">
                     ${Object.keys(JOB_DATA).map(role => 
                         JOB_DATA[role].map(job => `
                             <div class="job-item">
                                 <span style="color:${role==='T'?'#4169e1':role==='H'?'#32cd32':'#dc143c'}">${job}</span>
-                                <input type="number" value="${p.levels[job] || 0}" onchange="updateLevel(${pIdx}, '${job}', this.value)">
+                                <input type="number" value="${p.levels[job] || 0}" min="0" max="100" onchange="updateLevel(${pIdx}, '${job}', this.value)">
                             </div>
                         `).join('')
                     ).join('')}
@@ -149,15 +317,26 @@ async function pushData() {
         pushData();
     }
 
-    // 核心算法 (保留之前的回溯算法)
-    function roll() {
-        // ... (此处逻辑与上个版本相同)
-        // 关键点：在执行 roll 之前，建议先执行一次 fetchData() 保证数据是最新的
+    function removePlayer(idx) {
+        if(confirm("确定要移除这位队友吗？")) {
+            players.splice(idx, 1);
+            renderPlayers();
+            pushData();
+        }
+    }
+
+    // --- 核心分配算法 ---
+
+    async function roll() {
+        // 抽签前强制拉取一次云端，确保等级是最新的
+        await fetchData();
+
         const config = document.getElementById('dungeonType').value.split(',');
         const limit = { total: +config[0], T: +config[1], H: +config[2], D: +config[3], minLvl: +config[4] };
         const onlineList = players.filter(p => p.online);
         
-        if (onlineList.length === 0) return alert("无人在线！");
+        if (onlineList.length === 0) return alert("请先勾选在线的玩家！");
+
         const benchNeeded = Math.max(0, onlineList.length - limit.total);
         const playerPool = onlineList.map(p => {
             let options = [];
@@ -176,13 +355,14 @@ async function pushData() {
         let success = false;
 
         function solve(idx, curT, curH, curD, curB) {
-            if (idx === playerPool.length) { success = true; return true; }
+            if (idx === playerPool.length) return true;
             const p = playerPool[idx];
             for (let choice of p.options) {
                 if (choice.role === 'T' && curT >= limit.T) continue;
                 if (choice.role === 'H' && curH >= limit.H) continue;
                 if (choice.role === 'D' && curD >= limit.D) continue;
                 if (choice.role === 'BENCH' && curB >= benchNeeded) continue;
+
                 finalResults.push({ name: p.name, job: choice.job, role: choice.role });
                 if (solve(idx + 1, choice.role === 'T'?curT+1:curT, choice.role === 'H'?curH+1:curH, choice.role === 'D'?curD+1:curD, choice.role === 'BENCH'?curB+1:curB)) return true;
                 finalResults.pop();
@@ -190,18 +370,26 @@ async function pushData() {
             return false;
         }
 
-        solve(0, 0, 0, 0, 0);
+        success = solve(0, 0, 0, 0, 0);
+
         const resDiv = document.getElementById('result');
         resDiv.style.display = 'block';
         if (success) {
             finalResults.sort((a, b) => (a.role === 'BENCH' ? 1 : -1));
-            resDiv.innerHTML = `<h3>匹配成功：</h3>` + finalResults.map(r => `<div class="res-row res-${r.role.toLowerCase()}"><span>${r.name}</span><span>${r.job}</span></div>`).join('');
+            resDiv.innerHTML = `<h2 style="border:none; text-align:center">🎲 抽签结果</h2>` + 
+                finalResults.map(r => `
+                    <div class="res-row res-${r.role.toLowerCase()}">
+                        <span><b>${r.name}</b></span>
+                        <span>${r.job} ${r.role !== 'BENCH' ? `<span class="role-badge bg-${r.role.toLowerCase()}">${r.role}</span>` : ''}</span>
+                    </div>
+                `).join('');
+            resDiv.scrollIntoView({ behavior: 'smooth' });
         } else {
-            resDiv.innerHTML = "匹配失败，职业池太浅了！";
+            resDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#ff7675"><b>匹配失败</b><br>由于等级限制或职能冲突，无法凑齐阵容。</div>`;
         }
     }
 
-    // 页面加载时拉取数据
+    // 初始加载
     fetchData();
 </script>
 </body>
