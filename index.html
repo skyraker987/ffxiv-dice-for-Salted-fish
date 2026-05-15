@@ -80,20 +80,32 @@
         }
     }
 
-    async function pushData() {
-        showStatus("正在同步到云端...");
-        localStorage.setItem('ffxiv_v2_players', JSON.stringify(players));
-        try {
-            await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ players })
-            });
+async function pushData() {
+    showStatus("正在同步到云端...");
+    // 也要存在本地，防止云端挂了
+    localStorage.setItem('ffxiv_v2_players', JSON.stringify(players));
+    
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST', // 如果 POST 不行，试着改成 'PUT'
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ players: players }) // 确保外层有 players 键
+        });
+
+        if (response.ok) {
             showStatus("已实时同步至云端");
-        } catch (e) {
-            showStatus("云端同步失败，仅存至本地");
+        } else {
+            const errorText = await response.text();
+            showStatus("云端拒绝保存: " + response.status);
+            console.error("同步失败详情:", errorText);
         }
+    } catch (e) {
+        showStatus("网络连接异常 (VPN?)");
+        console.error(e);
     }
+}
 
     function showStatus(msg) {
         document.getElementById('syncStatus').innerText = msg;
