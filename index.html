@@ -80,30 +80,30 @@
         }
     }
 
+// 修改后的同步函数
 async function pushData() {
-    showStatus("正在同步到云端...");
-    // 也要存在本地，防止云端挂了
+    showStatus("正在尝试同步到云端...");
     localStorage.setItem('ffxiv_v2_players', JSON.stringify(players));
     
     try {
+        // 尝试使用 POST 覆盖数据。如果还是 401，建议去 npoint.io 重新建一个不带 Key 的 Bin
         const response = await fetch(API_URL, {
-            method: 'POST', // 如果 POST 不行，试着改成 'PUT'
+            method: 'POST', 
             headers: { 
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ players: players }) // 确保外层有 players 键
+            body: JSON.stringify({ players: players })
         });
 
         if (response.ok) {
-            showStatus("已实时同步至云端");
+            showStatus("✅ 已实时同步至云端");
         } else {
-            const errorText = await response.text();
-            showStatus("云端拒绝保存: " + response.status);
-            console.error("同步失败详情:", errorText);
+            // 这里会捕获 401 错误
+            showStatus("❌ 同步失败: " + response.status + " (权限拒绝)");
+            console.error("权限错误：请检查 npoint 是否设置了 Key。建议新建一个完全公开的 Bin。");
         }
     } catch (e) {
-        showStatus("网络连接异常 (VPN?)");
-        console.error(e);
+        showStatus("❌ 网络异常，请检查 VPN 节点");
     }
 }
 
